@@ -83,11 +83,11 @@ for epoch in range(num_epochs):
         encoding_batch = tokeniser.batch_encode_plus(input_batch,max_length=128,padding=128, truncation=True) # run through max pad is still quite small seq length
 
         target_batch = train_y[ind:min(ind + batch_size, train_X.shape[0])]
-        target_batch = torch.
+        target_batch = torch.torch.from_numpy(target_batch).view(-1)
 
         optimizer.zero_grad()  # zero out gradient
         outputs = model.train(encoding_batch['input_ids'], encoding_batch['attention_mask'])  # bert takes in attention mask and ids
-        loss = criterion(outputs, target_batch_torch)  # evaluate loss for given epoch
+        loss = criterion(outputs, target_batch)  # evaluate loss for given epoch
         loss.backward()  # backprop
         optimizer.step()
 
