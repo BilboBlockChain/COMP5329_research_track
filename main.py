@@ -41,7 +41,7 @@ import torch.nn as nn
 class BERT_classifier():
     def __init__(self):
         super(BERT_classifier, self).__init__()
-        self.bert = BertModel.from_pretrained(checkpoint, freeze=True) #currently froze BERT layers
+        self.bert = BertModel.from_pretrained(checkpoint) #currently froze BERT layers
         self.linear = nn.Linear(768, 256)
         self.output = nn.Linear(256, NUM_CLASS)
 
