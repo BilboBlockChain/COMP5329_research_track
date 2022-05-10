@@ -6,7 +6,7 @@ import numpy as np
 
 #params
 NUM_CLASS = 151
-num_epochs = 1
+num_epochs = 50
 batch_size = 16
 learning_rate = 0.01
 
@@ -27,11 +27,6 @@ model = BERT_classifier(checkpoint, NUM_CLASS) # uses same checkpoint as bert to
 model.to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-#test = tokeniser(train_X, padding = True, return_tensors="pt") #can explore tokenising before batch, outputs masked map and inputs tokens
-
-#inputs = next(iter(train_dataloader))
-#inputs.items()
 
 
 #train
