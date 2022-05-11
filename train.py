@@ -44,7 +44,6 @@ num_training_steps = num_epochs * len(train_dataloader)
 
 for epoch in range(num_epochs):
     train_loss = 0
-    train_acc = []
     with tqdm(train_dataloader, unit="batch") as tepoch:
         model.train()
 
@@ -66,7 +65,6 @@ for epoch in range(num_epochs):
 
             #acc
             batch_perf = np.array(outputs.detach().cpu().numpy()).argmax(axis=1) == targets.detach().cpu().numpy()
-            train_acc.append(batch_perf)
             batch_acc = np.sum(np.array(batch_perf)/len(batch_perf))
 
 
@@ -75,39 +73,34 @@ for epoch in range(num_epochs):
             tepoch.set_postfix(loss=loss.item(), batch_acc= batch_acc  )
 
     model.eval()
-    for batch in val_dataloader:
-        inputs = torch.stack(batch['input_ids'][0], dim=1).to(device)  # convert list of tensors to tensors
-        targets = batch['y'].to(device)
-        mask = torch.stack(batch['attention_mask'][0], dim=1).to(device)
-        with torch.no_grad():
-            outputs = model(inputs, mask)
-        predictions = torch.argmax(outputs, dim=-1)
 
-    val_perf = np.array(predictions.detach().cpu().numpy()) == targets.detach().cpu().numpy()
-    val_acc = np.sum(np.array(batch_perf) / len(val_perf))
 
-    for batch in train_dataloader:
-        inputs = torch.stack(batch['input_ids'][0], dim=1).to(device)  # convert list of tensors to tensors
-        targets = batch['y'].to(device)
-        mask = torch.stack(batch['attention_mask'][0], dim=1).to(device)
-        with torch.no_grad():
-            outputs = model(inputs, mask)
-        predictions = torch.argmax(outputs, dim=-1)
+    def eval(dataload):
+        out = []
+        targ = []
+        for batch in dataload:
+            inputs = torch.stack(batch['input_ids'][0], dim=1).to(device)  # convert list of tensors to tensors
+            targets = batch['y'].to(device)
+            mask = torch.stack(batch['attention_mask'][0], dim=1).to(device)
+            with torch.no_grad():
+                outputs = model(inputs, mask)
+            predictions = torch.argmax(outputs, dim=-1)
+            out.append(predictions)
+            targ.append(targets)
+        return torch.sum(torch.cat(out).squeeze() == torch.cat(targ).squeeze()).detach().cpu().numpy()/len(torch.cat(out).squeeze())
 
-    train_perf = np.array(predictions.detach().cpu().numpy()) == targets.detach().cpu().numpy()
-    train_acc = np.sum(np.array(batch_perf) / len(val_perf))
-    print(f"Epoch: {epoch} |Train_Acc: {train_acc}, Val_Acc: {val_acc}")
+    eval(val_dataloader)
+    eval(test_dataloader)
+    eval(train_dataloader)
 
-#test
-    for batch in test_dataloader:
-        inputs = torch.stack(batch['input_ids'][0], dim=1).to(device)  # convert list of tensors to tensors
-        targets = batch['y'].to(device)
-        mask = torch.stack(batch['attention_mask'][0], dim=1).to(device)
-        with torch.no_grad():
-            outputs = model(inputs, mask)
-        predictions = torch.argmax(outputs, dim=-1)
-    test_perf = np.array(predictions.detach().cpu().numpy()) == targets.detach().cpu().numpy()
-    test_acc = np.sum(np.array(batch_perf) / len(val_perf))
+
+
+
+
+
+
+
+
 
 
 
