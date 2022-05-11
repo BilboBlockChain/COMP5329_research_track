@@ -44,7 +44,8 @@ def preprocess(): #currently doesnt take params but we probably want to  include
 
     def tokenize_function(data):
 
-        tokenized_batch = tokenizer(data["text"], padding="max_length", truncation=True, return_tensors='pt')
+        #tokenized_batch = tokenizer(data["text"], padding="max_length", truncation=True, return_tensors='pt')
+        tokenized_batch = tokenizer(data["text"], padding='max_length', max_length=256, return_tensors='pt')
         return tokenized_batch
 
 
@@ -54,7 +55,6 @@ def preprocess(): #currently doesnt take params but we probably want to  include
 
 if __name__ == "__main__":
     dataset, checkpoint = preprocess()
-
 
 
 

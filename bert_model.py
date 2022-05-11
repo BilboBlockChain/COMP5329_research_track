@@ -15,8 +15,12 @@ class BERT_classifier(nn.Module): #inherit from pytorch module
     def forward(self, inputs, mask):
 
         # https://stackoverflow.com/questions/62705268/why-bert-transformer-uses-cls-token-for-classification-instead-of-average-over use the first token for classification see original BERT paper
-        bert_out = self.bert(inputs, attention_mask=mask)  # out['last_hidden_state'].shape = (sequence_length, batch_size,768)
-        cls_out = bert_out['last_hidden_state'][0, :, :].view(-1, 768) ## extract the 1st token's embeddings ala original paper, could consider averaging over states instead
-        head_out = f.relu(self.head(cls_out))
+        bert_out = self.bert(inputs, attention_mask=mask)  # out['last_hidden_state'].shape = (batch_size,sequence_length, 768)
+        #print(bert_out[1].shape, bert_out[0].shape )
+        #head_out = f.relu(self.head(bert_out[1]))
+
+        #print(head_out.shape)
+        head_out =self.head(bert_out['last_hidden_state'][:, 0, :].view(-1, 768)) ## extract the 1st token's embeddings ala original paper, could consider averaging over states instead
         out = self.output(head_out)
+        #print(out.shape)
         return out
