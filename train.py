@@ -1,12 +1,15 @@
 from pre_processing import preprocess
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
 import torch
 import torch.nn as nn
 import numpy as np
+import torchmetrics as tm
+from laplace import Laplace
 
+import pandas as pd
 #params
 NUM_CLASS = 151
-num_epochs = 5
+num_epochs = 1
 batch_size = 16
 learning_rate = 5e-5
 momentum = 0.6
@@ -19,9 +22,6 @@ train_dataloader = DataLoader(dataset['train'], shuffle=True, batch_size=batch_s
 val_dataloader = DataLoader(dataset['val'], batch_size=batch_size)
 test_dataloader = DataLoader(dataset['test'], batch_size=batch_size)
 
-
-test = next(iter(train_dataloader))
-test
 
 # get model
 from bert_model import BERT_classifier
@@ -78,29 +78,72 @@ for epoch in range(num_epochs):
     def eval(dataload):
         out = []
         targ = []
-        for batch in dataload:
+        for batch in tqdm(dataload):
             inputs = torch.stack(batch['input_ids'][0], dim=1).to(device)  # convert list of tensors to tensors
             targets = batch['y'].to(device)
             mask = torch.stack(batch['attention_mask'][0], dim=1).to(device)
             with torch.no_grad():
                 outputs = model(inputs, mask)
-            predictions = torch.argmax(outputs, dim=-1)
-            out.append(predictions)
+            out.append(outputs)
+            out_torch = torch.cat(out).squeeze()
+            pred_torch = torch.argmax(out_torch, dim=-1)
             targ.append(targets)
-        return torch.sum(torch.cat(out).squeeze() == torch.cat(targ).squeeze()).detach().cpu().numpy()/len(torch.cat(out).squeeze())
+            target_torch = torch.cat(targ).squeeze()
 
-    eval(val_dataloader)
-    eval(test_dataloader)
-    eval(train_dataloader)
+        return torch.sum(pred_torch == target_torch).detach().cpu().numpy()/len(torch.cat(out).squeeze()), out_torch, target_torch
 
 
+    val, val_out_torch, val_target_torch = eval(val_dataloader)
+    train, train_out_torch, train_target_torch = eval(train_dataloader)
 
+    CE = tm.CalibrationError().to(device)
 
-
-
-
-
+    print(f"Train Acc: {train}, Train Calibration Error {CE(train_out_torch,train_target_torch)}|Val Acc:{val}, Val Calibration Error {CE(val_out_torch,val_target_torch)}")
 
 
 
+#test results
 
+    test, test_out_torch, test_target_torch = eval(test_dataloader)
+    #test = eval(test_dataloader)
+
+    CE(test_out_torch,test_target_torch)
+    CE(test_out_torch[4500:,:],test_target_torch[4500:])
+
+
+
+# laplaceAlt approx
+
+
+
+
+X = torch.from_numpy(np.vstack(np.concatenate(train_dataloader.dataset.to_pandas()['input_ids'].values, axis=0 )))
+y = torch.from_numpy(train_dataloader.dataset.to_pandas()['y'].values)
+
+
+class LaplaceDataset(Dataset):
+    def __init__(self, X, y):
+        super(Dataset, self).__init__()
+        self.X = X
+        self.y = y
+    def __len__(self):
+        return len(X)
+    def __getitem__(self):
+        return X,y
+
+
+  trainLaplace =  LaplaceDataset(X = X, y = y)
+
+  trainLaplace
+
+
+  train_lap_dataloader = DataLoader(trainLaplace,shuffle=True, batch_size=batch_size)
+
+
+  la = Laplace(model, 'classification',
+               subset_of_weights='all',
+               hessian_structure='diag')
+  la.fit(train_lap_dataloader)
+
+
+  next(iter(train_lap_dataloader.dataset))
