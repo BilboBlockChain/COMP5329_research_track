@@ -80,9 +80,9 @@ for epoch in range(num_epochs):
 
 
 
-    eval(val_dataloader)
-    eval(test_dataloader)
-    eval(train_dataloader)
+    print(eval(val_dataloader,model))
+    print(eval(test_dataloader,model))
+    print(eval(train_dataloader,model))
 
 
 
