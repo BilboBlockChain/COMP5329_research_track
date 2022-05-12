@@ -4,12 +4,12 @@
 
 # An Evaluation Dataset for Intent Classification and Out-of-Scope Prediction dataset read from https://github.com/clinc/oos-eval/blob/master/data/data_full.json
 from datasets import Dataset, DatasetDict
-from transformers import BertTokenizer
+from transformers import BertTokenizer,RobertaTokenizer
 import pandas as pd
 import json
 from torch.utils.data import DataLoader
 
-def preprocess(): #currently doesnt take params but we probably want to  include some if we decide to make changes to preprocessing for testing results
+def preprocess(tokenizer_type = BertTokenizer, checkpoint = 'bert-base-uncased'): #currently doesnt take params but we probably want to  include some if we decide to make changes to preprocessing for testing results
 
     #open json in pandas for easy appending and one hot encode
     with open('data/data_full.json') as json_data:
@@ -39,8 +39,8 @@ def preprocess(): #currently doesnt take params but we probably want to  include
     ds['val'] = val_dataset
     ds['test'] = test_dataset
 
-    checkpoint = 'bert-base-uncased'
-    tokenizer = BertTokenizer.from_pretrained(checkpoint)
+    
+    tokenizer = tokenizer_type.from_pretrained(checkpoint)
 
     def tokenize_function(data):
 

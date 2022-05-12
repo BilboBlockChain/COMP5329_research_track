@@ -3,7 +3,9 @@ from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 import numpy as np
-
+from utils import eval 
+from bert_model import BERT_classifier
+from transformers import BertTokenizer,RobertaTokenizer
 #params
 NUM_CLASS = 151
 num_epochs = 5
@@ -12,7 +14,7 @@ learning_rate = 5e-5
 momentum = 0.6
 
 #get batches
-dataset, checkpoint = preprocess() #pull bert tokenised data and checkpoint from preprocess
+dataset, checkpoint = preprocess(tokenizer_type = RobertaTokenizer, checkpoint = 'bert-base-uncased') #pull bert tokenised data and checkpoint from preprocess
 
 
 train_dataloader = DataLoader(dataset['train'], shuffle=True, batch_size=batch_size)
@@ -24,7 +26,6 @@ test = next(iter(train_dataloader))
 test
 
 # get model
-from bert_model import BERT_classifier
 
 criterion = nn.CrossEntropyLoss()
 device = torch.device("cuda")
@@ -75,19 +76,7 @@ for epoch in range(num_epochs):
     model.eval()
 
 
-    def eval(dataload):
-        out = []
-        targ = []
-        for batch in dataload:
-            inputs = torch.stack(batch['input_ids'][0], dim=1).to(device)  # convert list of tensors to tensors
-            targets = batch['y'].to(device)
-            mask = torch.stack(batch['attention_mask'][0], dim=1).to(device)
-            with torch.no_grad():
-                outputs = model(inputs, mask)
-            predictions = torch.argmax(outputs, dim=-1)
-            out.append(predictions)
-            targ.append(targets)
-        return torch.sum(torch.cat(out).squeeze() == torch.cat(targ).squeeze()).detach().cpu().numpy()/len(torch.cat(out).squeeze())
+
 
     eval(val_dataloader)
     eval(test_dataloader)
