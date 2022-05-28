@@ -9,7 +9,7 @@ import pandas as pd
 import json
 from torch.utils.data import DataLoader
 
-def preprocess(): #currently doesnt take params but we probably want to  include some if we decide to make changes to preprocessing for testing results
+def preprocess(length = 226): #currently doesnt take params but we probably want to  include some if we decide to make changes to preprocessing for testing results
 
     #open json in pandas for easy appending and one hot encode
     with open('data/data_full.json') as json_data:
@@ -45,7 +45,7 @@ def preprocess(): #currently doesnt take params but we probably want to  include
     def tokenize_function(data):
 
         #tokenized_batch = tokenizer(data["text"], padding="max_length", truncation=True, return_tensors='pt')
-        tokenized_batch = tokenizer(data["text"], padding='max_length', max_length=256, return_tensors='pt')
+        tokenized_batch = tokenizer(data["text"], padding='max_length', max_length=length, return_tensors='pt')
         return tokenized_batch
 
 

@@ -1,5 +1,5 @@
 from pre_processing import preprocess
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader
 import torch
 import torch.nn as nn
 import numpy as np
@@ -15,7 +15,7 @@ learning_rate = 5e-5
 momentum = 0.6
 
 #get batches
-dataset, checkpoint = preprocess() #pull bert tokenised data and checkpoint from preprocess
+dataset, checkpoint = preprocess(34) #pull bert tokenised data and checkpoint from preprocess
 
 
 train_dataloader = DataLoader(dataset['train'], shuffle=True, batch_size=batch_size)
@@ -54,7 +54,8 @@ for epoch in range(num_epochs):
             targets = batch['y'].to(device)
             mask = torch.stack(batch['attention_mask'][0], dim = 1).to(device)
 
-            outputs = model(inputs, mask)
+            #outputs = model(inputs, mask)
+            outputs = model(inputs)
 
             optimizer.zero_grad()  # zero out gradient
 
@@ -71,6 +72,7 @@ for epoch in range(num_epochs):
             train_loss += loss.item()
             #progress_bar.update(1)
             tepoch.set_postfix(loss=loss.item(), batch_acc= batch_acc  )
+
 
     model.eval()
 
@@ -91,6 +93,8 @@ for epoch in range(num_epochs):
             target_torch = torch.cat(targ).squeeze()
 
         return torch.sum(pred_torch == target_torch).detach().cpu().numpy()/len(torch.cat(out).squeeze()), out_torch, target_torch
+
+
 
 
     val, val_out_torch, val_target_torch = eval(val_dataloader)
@@ -114,36 +118,45 @@ for epoch in range(num_epochs):
 
 # laplaceAlt approx
 
-
+# lapalce expectes only two inputs so remove mask
 
 
 X = torch.from_numpy(np.vstack(np.concatenate(train_dataloader.dataset.to_pandas()['input_ids'].values, axis=0 )))
+#Mask = torch.from_numpy(np.vstack(np.concatenate(train_dataloader.dataset.to_pandas()['attention_mask'].values, axis=0 )))
 y = torch.from_numpy(train_dataloader.dataset.to_pandas()['y'].values)
+laplaceDataset = TensorDataset(X,y)
 
 
-class LaplaceDataset(Dataset):
-    def __init__(self, X, y):
-        super(Dataset, self).__init__()
-        self.X = X
-        self.y = y
-    def __len__(self):
-        return len(X)
-    def __getitem__(self):
-        return X,y
+train_lap_dataloader = DataLoader(laplaceDataset,shuffle=True, batch_size=batch_size)
 
 
-  trainLaplace =  LaplaceDataset(X = X, y = y)
 
-  trainLaplace
+la = Laplace(model.eval(), 'classification')
 
-
-  train_lap_dataloader = DataLoader(trainLaplace,shuffle=True, batch_size=batch_size)
-
-
-  la = Laplace(model, 'classification',
-               subset_of_weights='all',
-               hessian_structure='diag')
-  la.fit(train_lap_dataloader)
+la.fit(train_lap_dataloader)
+la.optimize_prior_precision(method='marglik')
 
 
-  next(iter(train_lap_dataloader.dataset))
+def eval(dataload):
+    out = []
+    targ = []
+    for X,y in tqdm(dataload):
+        inputs = X.to(device)  # convert list of tensors to tensors
+        targets = y.to(device)
+        with torch.no_grad():
+            outputs = model(inputs)
+        out.append(outputs)
+        out_torch = torch.cat(out).squeeze()
+        pred_torch = torch.argmax(out_torch, dim=-1)
+        targ.append(targets)
+        target_torch = torch.cat(targ).squeeze()
+
+    return torch.sum(pred_torch == target_torch).detach().cpu().numpy() / len(
+        torch.cat(out).squeeze()), out_torch, target_torch
+
+
+probs_laplace = eval(train_lap_dataloader)
+acc_laplace = (probs_laplace.argmax(-1) == targets).float().mean()
+ece_laplace = ECE(bins=15).measure(probs_laplace.numpy(), targets.numpy())
+nll_laplace = -dists.Categorical(probs_laplace).log_prob(targets).mean()
+

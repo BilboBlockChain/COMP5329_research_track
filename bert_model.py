@@ -12,10 +12,12 @@ class BERT_classifier(nn.Module): #inherit from pytorch module
         self.head = nn.Linear(768, 256)
         self.output = nn.Linear(256, num_class)
 
-    def forward(self, inputs, mask):
+    def forward(self, inputs, mask=None):
 
         # https://stackoverflow.com/questions/62705268/why-bert-transformer-uses-cls-token-for-classification-instead-of-average-over use the first token for classification see original BERT paper
-        bert_out = self.bert(inputs, attention_mask=mask)  # out['last_hidden_state'].shape = (batch_size,sequence_length, 768)
+        #bert_out = self.bert(inputs, attention_mask=mask)  # out['last_hidden_state'].shape = (batch_size,sequence_length, 768)
+        bert_out = self.bert(inputs)
+                               # out['last_hidden_state'].shape = (batch_size,sequence_length, 768)
         #print(bert_out[1].shape, bert_out[0].shape )
         #head_out = f.relu(self.head(bert_out[1]))
 
